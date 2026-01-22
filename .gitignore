@@ -1,0 +1,33 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+app/frontend/.env
+app/frontend/.env.local
+
+# Dependencies
+node_modules/
+app/frontend/node_modules/
+
+# Build outputs
+app/frontend/dist/
+app/frontend/android/app/build/
+app/frontend/android/.gradle/
+app/frontend/android/local.properties
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Service account (keep secure!)
+service-account.json
