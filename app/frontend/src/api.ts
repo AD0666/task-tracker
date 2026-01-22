@@ -51,6 +51,9 @@ const API_BASE_URL = import.meta.env.DEV
   ? 'http://localhost:4000' // Use local Node.js backend in development
   : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'); // Fallback to local backend
 
+// Detect if we're using Apps Script (URL contains script.google.com)
+const IS_APPS_SCRIPT = API_BASE_URL.includes('script.google.com');
+
 // Debug: Log API configuration on module load
 console.log('[API] ====== API CONFIGURATION ======');
 console.log('[API] DEV mode:', import.meta.env.DEV);
@@ -65,8 +68,17 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   console.log('[API] Input URL:', url);
   console.log('[API] API_BASE_URL:', API_BASE_URL);
   
-  // Build full URL - ensure it's always a string
-  const fullUrl: string = API_BASE_URL ? `${API_BASE_URL}${url}` : url;
+  // Build full URL
+  // For Apps Script, if URL is empty, we're hitting root /exec endpoint
+  // For local backend, append the URL path normally
+  let fullUrl: string;
+  if (IS_APPS_SCRIPT && (url === '' || url === '/')) {
+    // Apps Script root endpoint
+    fullUrl = API_BASE_URL.endsWith('/exec') ? API_BASE_URL : `${API_BASE_URL}/exec`;
+  } else {
+    // Normal URL concatenation
+    fullUrl = API_BASE_URL ? `${API_BASE_URL}${url}` : url;
+  }
   
   console.log('[API] Constructed Full URL:', fullUrl);
   console.log('[API] Username from storage:', username);
@@ -156,7 +168,29 @@ export async function loginApi(
   username: string,
   password: string
 ): Promise<{ token: string; user: User }> {
+  // Apps Script doesn't handle POST with pathInfo reliably
+  // Use root endpoint with action in body for Apps Script
+  if (IS_APPS_SCRIPT) {
+    console.log('[API] Using Apps Script login (root endpoint with action)');
+    const result = await request<{ token: string; user: User }>('', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        action: 'auth/login',
+        username, 
+        password 
+      })
+    });
+    
+    // Store username for future authenticated requests
+    if (result.user) {
+      setUsername(result.user.username);
+    }
+    
+    return result;
+  }
+  
   // Use standard POST to /auth/login endpoint (local Node.js backend)
+  console.log('[API] Using local backend login (/auth/login)');
   const result = await request<{ token: string; user: User }>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ username, password })
