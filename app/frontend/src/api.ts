@@ -52,13 +52,16 @@ const API_BASE_URL = import.meta.env.DEV
   : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'); // Fallback to local backend
 
 // Detect if we're using Apps Script (URL contains script.google.com)
-const IS_APPS_SCRIPT = API_BASE_URL.includes('script.google.com');
+// Check both the base URL and the env variable to be sure
+const IS_APPS_SCRIPT = API_BASE_URL.includes('script.google.com') || 
+                       (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.includes('script.google.com'));
 
 // Debug: Log API configuration on module load
 console.log('[API] ====== API CONFIGURATION ======');
 console.log('[API] DEV mode:', import.meta.env.DEV);
 console.log('[API] API_BASE_URL:', API_BASE_URL);
 console.log('[API] VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+console.log('[API] IS_APPS_SCRIPT:', IS_APPS_SCRIPT);
 console.log('[API] ===============================');
 
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
@@ -69,20 +72,30 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   console.log('[API] API_BASE_URL:', API_BASE_URL);
   
   // Build full URL
-  // For Apps Script, if URL is empty, we're hitting root /exec endpoint
-  // For local backend, append the URL path normally
+  // CRITICAL FIX: For Apps Script, ALL POST requests MUST go to root /exec
+  // The action/route information goes in the request body, NOT in the URL
   let fullUrl: string;
-  if (IS_APPS_SCRIPT && (url === '' || url === '/')) {
-    // Apps Script root endpoint
+  const method = options.method || 'GET';
+  
+  if (IS_APPS_SCRIPT && method === 'POST') {
+    // ALL POST requests to Apps Script go to root /exec endpoint
+    // The action/route is specified in the request body
     fullUrl = API_BASE_URL.endsWith('/exec') ? API_BASE_URL : `${API_BASE_URL}/exec`;
-  } else {
-    // Normal URL concatenation
+    console.log('[API] Apps Script POST - forcing root endpoint');
+    console.log('[API] Original URL was:', url, '(ignored for POST)');
+  } else if (IS_APPS_SCRIPT) {
+    // GET requests can use pathInfo
     fullUrl = API_BASE_URL ? `${API_BASE_URL}${url}` : url;
+    console.log('[API] Apps Script GET - using pathInfo');
+  } else {
+    // Local backend - normal URL concatenation
+    fullUrl = API_BASE_URL ? `${API_BASE_URL}${url}` : url;
+    console.log('[API] Local backend - normal URL');
   }
   
   console.log('[API] Constructed Full URL:', fullUrl);
   console.log('[API] Username from storage:', username);
-  console.log('[API] Request method:', options.method || 'GET');
+  console.log('[API] Request method:', method);
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -205,18 +218,31 @@ export async function loginApi(
 }
 
 export async function fetchAllTasks(): Promise<Task[]> {
+  // For Apps Script, GET requests use pathInfo
+  if (IS_APPS_SCRIPT) {
+    return request('/tasks');
+  }
   return request('/tasks');
 }
 
 export async function fetchMyTasks(): Promise<Task[]> {
+  if (IS_APPS_SCRIPT) {
+    return request('/tasks/my');
+  }
   return request('/tasks/my');
 }
 
 export async function fetchP1Tasks(): Promise<Task[]> {
+  if (IS_APPS_SCRIPT) {
+    return request('/tasks/p1');
+  }
   return request('/tasks/p1');
 }
 
 export async function fetchOverdueTasks(): Promise<Task[]> {
+  if (IS_APPS_SCRIPT) {
+    return request('/tasks/overdue');
+  }
   return request('/tasks/overdue');
 }
 

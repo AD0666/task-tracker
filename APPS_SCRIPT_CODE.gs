@@ -260,8 +260,9 @@ function handleRequest(e, method) {
       // Remove action from body before passing to handler
       var loginBody = Object.assign({}, body);
       delete loginBody.action;
+      Logger.log('Calling loginHandler with:', JSON.stringify(loginBody));
       result = loginHandler(loginBody);
-    } else if (action === 'tasks' || action.startsWith('tasks/')) {
+    } else if (action === 'tasks' || action === 'tasks/' || action.startsWith('tasks/')) {
       var username = (e.parameter.username || '').trim();
       var user = USERS.find(function (u) {
         return u.username === username;
