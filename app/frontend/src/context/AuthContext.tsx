@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, getToken, setToken, loginApi } from '../api';
+import { User, getToken, setToken, setUsername, loginApi } from '../api';
 
 interface AuthContextValue {
   user: User | null;
@@ -29,6 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const logout = () => {
     setTokenState(null);
     setUser(null);
+    setUsername(null);
   };
 
   return (

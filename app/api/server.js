@@ -27,9 +27,52 @@ const { on_priority_change } = require('../notification_service');
 
 const app = express();
 
-app.use(cors());
+// Debug: Log server startup
+console.log('========================================');
+console.log('SERVER STARTUP DEBUG');
+console.log('========================================');
+console.log('Port:', process.env.PORT || config.port);
+console.log('CORS: Enabled for all origins');
+console.log('========================================');
+
+// CORS configuration - allow all origins in development
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
+}));
+
 app.use(express.json());
 app.use(httpLoggerMiddleware);
+
+// Debug middleware - log all incoming requests (AFTER body parsing)
+app.use((req, res, next) => {
+  console.log('========================================');
+  console.log('INCOMING REQUEST DEBUG');
+  console.log('========================================');
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Path:', req.path);
+  console.log('Body:', JSON.stringify(req.body, null, 2));
+  console.log('IP:', req.ip);
+  console.log('========================================');
+  next();
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Task Tracker API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      login: 'POST /auth/login',
+      tasks: 'GET /tasks',
+      myTasks: 'GET /tasks/my'
+    }
+  });
+});
 
 // Health check
 app.get('/health', (req, res) => {
@@ -38,11 +81,24 @@ app.get('/health', (req, res) => {
 
 // Auth routes
 app.post('/auth/login', async (req, res, next) => {
+  console.log('========================================');
+  console.log('LOGIN REQUEST RECEIVED');
+  console.log('========================================');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Username:', req.body?.username);
+  console.log('Password:', req.body?.password ? '***' : 'MISSING');
+  console.log('========================================');
+  
   const { username, password } = req.body;
   try {
+    console.log('Attempting login for:', username);
     const result = await login(username, password);
+    console.log('Login successful for:', username);
+    console.log('Returning result:', JSON.stringify({ ...result, token: result.token ? '***' : 'MISSING' }, null, 2));
     res.json(result);
   } catch (err) {
+    console.error('Login failed:', err.message);
+    console.error('Error stack:', err.stack);
     next(err);
   }
 });
@@ -188,9 +244,19 @@ app.use(errorMiddleware);
 // Use PORT from environment (cPanel provides this) or fallback to config
 const PORT = process.env.PORT || config.port;
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   // eslint-disable-next-line no-console
-  console.log(`API server listening on port ${PORT}`);
+  console.log('========================================');
+  console.log('✓ SERVER STARTED SUCCESSFULLY');
+  console.log('========================================');
+  console.log(`Port: ${PORT}`);
+  console.log(`Host: 0.0.0.0 (all interfaces)`);
+  console.log(`Access at http://localhost:${PORT}`);
+  console.log(`Access at http://127.0.0.1:${PORT}`);
+  console.log(`Access at http://0.0.0.0:${PORT}`);
+  console.log('========================================');
+  console.log('Waiting for requests...');
+  console.log('========================================');
 });
 
 module.exports = app;

@@ -1,0 +1,13 @@
+{
+  "watch": ["app"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/*.json",
+    "login_check.json",
+    "**/login_check.json"
+  ],
+  "ext": "js,mjs,cjs",
+  "delay": 1000
+}
