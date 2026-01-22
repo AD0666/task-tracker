@@ -69,7 +69,9 @@ jobs:
 
       - name: Build APK
         working-directory: app/frontend/android
-        run: ./gradlew assembleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
